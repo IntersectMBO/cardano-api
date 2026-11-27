@@ -252,9 +252,9 @@ module Cardano.Api.Experimental.Tx
     -- separate.
   , TxView (..)
   , BodyView (..)
-  , TopTxOnlyView (..)
-  , WitnessesView (..)
-  , RedeemerView (..)
+  , TopTxOnlyFieldsView (..)
+  , TxWitnessesView (..)
+  , TxRedeemerView (..)
   , UndecodedPlutusScript (..)
   , viewSignedTx
   , viewUnsignedTx

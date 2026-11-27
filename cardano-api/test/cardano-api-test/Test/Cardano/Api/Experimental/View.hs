@@ -171,21 +171,21 @@ prop_view_built_body era = H.property $ Exp.obtainCommonConstraints era $ do
           & Exp.setTxProtocolParams pparams
   unsigned@(Exp.UnsignedTx tx) <- H.evalEither $ Exp.makeUnsignedTx era content
   let viewed = Exp.viewUnsignedTx era unsigned
-      body = Exp.txViewBody viewed
-      top = Exp.bvTopTxOnly body
+      body = Exp.tvBody viewed
+      top = Exp.bvTopTxOnlyFields body
   -- The ledger keeps inputs and reference inputs in sets.
   Set.fromList (Exp.bvIns body) H.=== Set.fromList ins
   Set.fromList (Exp.bvInsReference body) H.=== Set.fromList refIns
   Exp.bvOuts body H.=== outs
-  Exp.tvFee top H.=== fee
+  Exp.ttvFee top H.=== fee
   Exp.bvValidityLowerBound body H.=== Just lowerBound
   Exp.bvValidityUpperBound body H.=== Just upperBound
   Exp.bvTreasuryDonation body H.=== donation
   Exp.bvCurrentTreasuryValue body H.=== Just treasury
-  Exp.tvSubTransactions top H.=== []
-  Set.fromList (Exp.tvInsCollateral top) H.=== Set.fromList collateralIns
-  Exp.tvTotalCollateral top H.=== Just totalCollateral
-  Exp.tvReturnCollateral top H.=== Just (Exp.TxOut returnCollateral)
+  Exp.ttvSubTransactions top H.=== []
+  Set.fromList (Exp.ttvInsCollateral top) H.=== Set.fromList collateralIns
+  Exp.ttvTotalCollateral top H.=== Just totalCollateral
+  Exp.ttvReturnCollateral top H.=== Just (Exp.TxOut returnCollateral)
   Exp.bvMetadata body H.=== metadata
   Exp.bvAuxScripts body H.=== auxScripts
   Map.fromList (Exp.bvWithdrawals body) H.=== withdrawals
@@ -195,7 +195,7 @@ prop_view_built_body era = H.property $ Exp.obtainCommonConstraints era $ do
   Set.fromList (Exp.bvExtraKeyWits body) H.=== Set.fromList requiredSigners
   Exp.bvProposalProcedures body H.=== proposals
   Exp.bvVotingProcedures body H.=== votes
-  Exp.wvDatums (Exp.txViewWitnesses viewed) H.=== supplementalDatums
+  Exp.twvDatums (Exp.tvWitnesses viewed) H.=== supplementalDatums
   Exp.bvAuxDataHash body H.=== (L.hashTxAuxData <$> L.strictMaybeToMaybe (tx ^. L.auxDataTxL))
   -- Without Plutus scripts, the script integrity hash covers only the datums.
   Exp.bvScriptIntegrityHash body
@@ -228,12 +228,12 @@ prop_view_dijkstra_fields = H.property $ do
           & Exp.setTxAccountBalanceIntervals intervals
           & Exp.setTxStartingAccountBalanceIntervals startingIntervals
   unsigned <- H.evalEither $ Exp.makeUnsignedTx Exp.DijkstraEra content
-  let body = Exp.txViewBody (Exp.viewUnsignedTx Exp.DijkstraEra unsigned)
+  let body = Exp.tvBody (Exp.viewUnsignedTx Exp.DijkstraEra unsigned)
   Exp.bvGuards body H.=== toList guards
   Exp.bvRequiredTopLevelGuards body H.=== requiredGuards
   Exp.bvDirectDeposits body H.=== deposits
   Exp.bvAccountBalanceIntervals body H.=== intervals
-  Exp.tvStartingAccountBalanceIntervals (Exp.bvTopTxOnly body) H.=== startingIntervals
+  Exp.ttvStartingAccountBalanceIntervals (Exp.bvTopTxOnlyFields body) H.=== startingIntervals
 
 -- | One redeemer for each Conway purpose, each pointing at the only item of
 -- its kind, and one that points past the last input.
@@ -271,7 +271,7 @@ prop_view_redeemer_purposes = H.property $ do
         ]
       redeemers = L.Redeemers (Map.fromList [(pointer, (redeemerData, exUnits)) | pointer <- pointers])
       tx = L.mkBasicTx body & L.witsTxL . L.rdmrsTxWitsL .~ redeemers
-      viewed = Exp.wvRedeemers (Exp.txViewWitnesses (Exp.viewUnsignedTx Exp.ConwayEra (Exp.UnsignedTx tx)))
+      viewed = Exp.twvRedeemers (Exp.tvWitnesses (Exp.viewUnsignedTx Exp.ConwayEra (Exp.UnsignedTx tx)))
       apiPolicyId = fromMaryPolicyID policyId
       expected =
         Map.fromList
@@ -293,9 +293,9 @@ prop_view_redeemer_purposes = H.property $ do
           , ((Exp.SpendingScript, 7), Nothing)
           ]
   length viewed H.=== Map.size expected
-  Map.fromList [((Exp.rvPurpose r, Exp.rvIndex r), Exp.rvItem r) | r <- viewed] H.=== expected
-  map Exp.rvData viewed H.=== replicate (Map.size expected) (fromAlonzoData redeemerData)
-  map Exp.rvExUnits viewed H.=== replicate (Map.size expected) (fromAlonzoExUnits exUnits)
+  Map.fromList [((Exp.trvPurpose r, Exp.trvIndex r), Exp.trvItem r) | r <- viewed] H.=== expected
+  map Exp.trvData viewed H.=== replicate (Map.size expected) (fromAlonzoData redeemerData)
+  map Exp.trvExUnits viewed H.=== replicate (Map.size expected) (fromAlonzoExUnits exUnits)
 
 prop_view_guard_redeemer :: Property
 prop_view_guard_redeemer = H.property $ do
@@ -307,8 +307,8 @@ prop_view_guard_redeemer = H.property $ do
       pointer :: L.PlutusPurpose L.AsIx (Exp.LedgerEra Exp.DijkstraEra)
       pointer = Dijkstra.DijkstraGuarding (L.AsIx 0)
       tx = L.mkBasicTx body & L.witsTxL . L.rdmrsTxWitsL .~ L.Redeemers (Map.singleton pointer redeemer)
-      viewed = Exp.wvRedeemers (Exp.txViewWitnesses (Exp.viewUnsignedTx Exp.DijkstraEra (Exp.UnsignedTx tx)))
-  [(Exp.rvPurpose r, Exp.rvIndex r, Exp.rvItem r) | r <- viewed]
+      viewed = Exp.twvRedeemers (Exp.tvWitnesses (Exp.viewUnsignedTx Exp.DijkstraEra (Exp.UnsignedTx tx)))
+  [(Exp.trvPurpose r, Exp.trvIndex r, Exp.trvItem r) | r <- viewed]
     H.=== [(Exp.GuardingScript, 0, Just (Exp.AnyWitnessable (Exp.WitGuard (L.ScriptHashObj scriptHash))))]
 
 prop_view_witness_scripts :: Property
@@ -327,7 +327,7 @@ prop_view_witness_scripts = H.property $ do
       tx =
         L.mkBasicTx L.mkBasicTxBody
           & L.witsTxL . L.scriptTxWitsL .~ Map.fromList [(L.hashScript script, script) | script <- scripts]
-      viewed = Exp.wvScripts (Exp.txViewWitnesses (Exp.viewUnsignedTx Exp.ConwayEra (Exp.UnsignedTx tx)))
+      viewed = Exp.twvScripts (Exp.tvWitnesses (Exp.viewUnsignedTx Exp.ConwayEra (Exp.UnsignedTx tx)))
   Map.keysSet viewed H.=== Set.fromList (map L.hashScript scripts)
   case Map.lookup (L.hashScript nativeScript) viewed of
     Just (Right (Exp.AnySimpleScript _)) -> H.success
@@ -347,7 +347,7 @@ prop_view_aux_plutus_scripts = H.propertyOnce $ do
   let auxData :: L.TxAuxData (Exp.LedgerEra Exp.ConwayEra)
       auxData = L.mkAlonzoTxAuxData mempty [L.fromPlutusScript plutusScript]
       tx = L.mkBasicTx L.mkBasicTxBody & L.auxDataTxL .~ L.SJust auxData
-      body = Exp.txViewBody (Exp.viewUnsignedTx Exp.ConwayEra (Exp.UnsignedTx tx))
+      body = Exp.tvBody (Exp.viewUnsignedTx Exp.ConwayEra (Exp.UnsignedTx tx))
   Exp.bvAuxPlutusScripts body
     H.=== [Exp.UndecodedPlutusScript PlutusScriptV3 (PlutusScriptSerialised bytes)]
   length (Exp.bvAuxScripts body) H.=== 0
@@ -377,10 +377,10 @@ prop_view_sub_transactions = H.withTests 20 . H.property $ do
       $ Exp.makeUnsignedTx Exp.DijkstraEra
       $ Exp.defaultTxBodyContent & Exp.setTxSignedSubTransactions subTxs
   let viewed =
-        Exp.tvSubTransactions
-          (Exp.bvTopTxOnly (Exp.txViewBody (Exp.viewUnsignedTx Exp.DijkstraEra unsigned)))
-  map Exp.txViewId viewed H.=== ids
-  map (Exp.wvKeyWitnesses . Exp.txViewWitnesses) viewed
+        Exp.ttvSubTransactions
+          (Exp.bvTopTxOnlyFields (Exp.tvBody (Exp.viewUnsignedTx Exp.DijkstraEra unsigned)))
+  map Exp.tvId viewed H.=== ids
+  map (Exp.twvKeyWitnesses . Exp.tvWitnesses) viewed
     H.=== [toList (tx ^. L.witsTxL . L.addrTxWitsL) | Exp.SignedSubTx tx <- subTxs]
 
 -- | The top level and its sub-transaction each have one input and a redeemer
@@ -411,14 +411,14 @@ prop_view_sub_transaction_witnesses = H.property $ do
           )
           & L.witsTxL . L.rdmrsTxWitsL .~ redeemers
       viewed = Exp.viewUnsignedTx Exp.DijkstraEra (Exp.UnsignedTx tx)
-      subViews = Exp.tvSubTransactions (Exp.bvTopTxOnly (Exp.txViewBody viewed))
+      subViews = Exp.ttvSubTransactions (Exp.bvTopTxOnlyFields (Exp.tvBody viewed))
       spends txIn = Just (Exp.AnyWitnessable (Exp.WitTxIn (fromShelleyTxIn txIn)))
-  map Exp.rvItem (Exp.wvRedeemers (Exp.txViewWitnesses viewed)) H.=== [spends topIn]
-  map (map Exp.rvItem . Exp.wvRedeemers . Exp.txViewWitnesses) subViews H.=== [[spends subIn]]
-  Map.keys (Exp.wvScripts (Exp.txViewWitnesses viewed)) H.=== []
-  map (Map.keys . Exp.wvScripts . Exp.txViewWitnesses) subViews H.=== [[L.hashScript script]]
-  Exp.wvDatums (Exp.txViewWitnesses viewed) H.=== Map.empty
-  map (Exp.wvDatums . Exp.txViewWitnesses) subViews H.=== [datums]
+  map Exp.trvItem (Exp.twvRedeemers (Exp.tvWitnesses viewed)) H.=== [spends topIn]
+  map (map Exp.trvItem . Exp.twvRedeemers . Exp.tvWitnesses) subViews H.=== [[spends subIn]]
+  Map.keys (Exp.twvScripts (Exp.tvWitnesses viewed)) H.=== []
+  map (Map.keys . Exp.twvScripts . Exp.tvWitnesses) subViews H.=== [[L.hashScript script]]
+  Exp.twvDatums (Exp.tvWitnesses viewed) H.=== Map.empty
+  map (Exp.twvDatums . Exp.tvWitnesses) subViews H.=== [datums]
 
 prop_view_signed_vs_unsigned :: Property
 prop_view_signed_vs_unsigned = H.property $ do
@@ -432,7 +432,7 @@ prop_view_signed_vs_unsigned = H.property $ do
       signed = Exp.signTx Exp.ConwayEra [] [witness] unsigned
       signedView = Exp.viewSignedTx Exp.ConwayEra signed
       unsignedView = Exp.viewUnsignedTx Exp.ConwayEra unsigned
-  Exp.txViewId signedView H.=== Exp.txViewId unsignedView
-  Exp.txViewBody signedView H.=== Exp.txViewBody unsignedView
-  Exp.wvKeyWitnesses (Exp.txViewWitnesses signedView) H.=== [witness]
-  Exp.wvKeyWitnesses (Exp.txViewWitnesses unsignedView) H.=== []
+  Exp.tvId signedView H.=== Exp.tvId unsignedView
+  Exp.tvBody signedView H.=== Exp.tvBody unsignedView
+  Exp.twvKeyWitnesses (Exp.tvWitnesses signedView) H.=== [witness]
+  Exp.twvKeyWitnesses (Exp.tvWitnesses unsignedView) H.=== []

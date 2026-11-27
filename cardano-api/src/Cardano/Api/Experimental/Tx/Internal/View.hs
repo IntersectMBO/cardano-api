@@ -31,11 +31,11 @@ module Cardano.Api.Experimental.Tx.Internal.View
 
     -- * Body fields
   , BodyView (..)
-  , TopTxOnlyView (..)
+  , TopTxOnlyFieldsView (..)
 
     -- * Witness set
-  , WitnessesView (..)
-  , RedeemerView (..)
+  , TxWitnessesView (..)
+  , TxRedeemerView (..)
   , UndecodedPlutusScript (..)
   )
 where
@@ -105,17 +105,17 @@ import Lens.Micro ((^.))
 -- witness set. A top-level transaction is @'TxView' 'L.TopTx' era@; a
 -- Dijkstra sub-transaction is @'TxView' 'L.SubTx' era@.
 data TxView (l :: L.TxLevel) era = TxView
-  { txViewId :: TxId
+  { tvId :: TxId
   -- ^ The transaction ID: the hash of the body.
-  , txViewBody :: BodyView l era
+  , tvBody :: BodyView l era
   -- ^ The body fields, with the metadata and the auxiliary scripts.
-  , txViewWitnesses :: WitnessesView era
+  , tvWitnesses :: TxWitnessesView era
   -- ^ The witness set: signatures, scripts, datums and redeemers.
   }
 
 -- | The body fields of a decoded transaction, plus its metadata and
 -- auxiliary scripts. The fields both levels have are here; the top-level only
--- fields are in 'TopTxOnlyView'.
+-- fields are in 'TopTxOnlyFieldsView'.
 --
 -- Most fields have the type 'Cardano.Api.Experimental.Tx.BodyContent' uses
 -- for the same data, without the witness it is paired with there. The
@@ -196,7 +196,7 @@ data BodyView (l :: L.TxLevel) era = BodyView
   -- exact amount. Checked before this body's withdrawals, certificates and
   -- direct deposits: a top-level body checks after all its sub-transactions,
   -- and a sub-transaction after the ones before it.
-  , bvTopTxOnly :: TopTxOnlyView l era
+  , bvTopTxOnlyFields :: TopTxOnlyFieldsView l era
   -- ^ The fields only a top-level transaction has. 'NoTopTxFields' for a
   -- sub-transaction.
   }
@@ -204,70 +204,70 @@ data BodyView (l :: L.TxLevel) era = BodyView
 -- | The fields only a top-level transaction has. Matching the constructor
 -- tells you the level: 'TopTxView' for a top-level body, 'NoTopTxFields' for a
 -- sub-transaction, which has none of these fields.
-data TopTxOnlyView (l :: L.TxLevel) era where
+data TopTxOnlyFieldsView (l :: L.TxLevel) era where
   TopTxView
-    :: { tvInsCollateral :: [TxIn]
+    :: { ttvInsCollateral :: [TxIn]
        -- ^ Collateral inputs, sorted. The ledger takes them if a Plutus
        -- script fails.
-       , tvTotalCollateral :: Maybe L.Coin
+       , ttvTotalCollateral :: Maybe L.Coin
        -- ^ The total collateral, in lovelace. 'Nothing': not in the body.
-       , tvReturnCollateral :: Maybe (TxOut era)
+       , ttvReturnCollateral :: Maybe (TxOut era)
        -- ^ The output that gets the rest of the collateral back if a Plutus
        -- script fails. 'Nothing': not in the body.
-       , tvFee :: L.Coin
+       , ttvFee :: L.Coin
        -- ^ The fee, in lovelace.
-       , tvScriptValidity :: ScriptValidity
+       , ttvScriptValidity :: ScriptValidity
        -- ^ Whether the Plutus scripts pass. @ScriptInvalid@: they fail, so the
        -- ledger takes only the collateral.
-       , tvSubTransactions :: [TxView L.SubTx era]
+       , ttvSubTransactions :: [TxView L.SubTx era]
        -- ^ From Dijkstra on. Sub-transactions, in the body's order, each with
        -- its own witness set.
-       , tvStartingAccountBalanceIntervals :: L.AccountBalanceIntervals era
+       , ttvStartingAccountBalanceIntervals :: L.AccountBalanceIntervals era
        -- ^ From Dijkstra on. Like 'bvAccountBalanceIntervals', but checked
        -- once, before the whole transaction, sub-transactions included.
        }
-    -> TopTxOnlyView L.TopTx era
+    -> TopTxOnlyFieldsView L.TopTx era
   -- | A sub-transaction has none of these fields.
-  NoTopTxFields :: TopTxOnlyView L.SubTx era
+  NoTopTxFields :: TopTxOnlyFieldsView L.SubTx era
 
 -- | A transaction's witness set, as decoded.
-data WitnessesView era = WitnessesView
-  { wvKeyWitnesses :: [L.WitVKey L.Witness]
+data TxWitnessesView era = TxWitnessesView
+  { twvKeyWitnesses :: [L.WitVKey L.Witness]
   -- ^ Signatures: each key and its signature of the body, in the ledger types
   -- 'Cardano.Api.Experimental.Tx.signTx' takes.
-  , wvBootstrapWitnesses :: [L.BootstrapWitness]
+  , twvBootstrapWitnesses :: [L.BootstrapWitness]
   -- ^ Signatures for Byron addresses.
-  , wvScripts :: Map L.ScriptHash (Either UndecodedPlutusScript (AnyScript era))
+  , twvScripts :: Map L.ScriptHash (Either UndecodedPlutusScript (AnyScript era))
   -- ^ Scripts, by hash. 'Right' when the script deserialises at the era's
   -- latest protocol version, the same check the decoder of 'AnyScript' makes.
   -- 'Left' for a Plutus script that does not: the ledger decodes a Plutus
   -- script as bytes and only checks them when it validates the transaction.
   -- Native scripts are always 'Right'.
-  , wvDatums :: Map L.DataHash (L.Data era)
+  , twvDatums :: Map L.DataHash (L.Data era)
   -- ^ Datums, by hash: every datum in the witness set, typed like the
   -- supplemental datums of 'Cardano.Api.Experimental.Tx.BodyContent'.
   -- Telling which ones are supplemental would need the UTxO.
-  , wvRedeemers :: [RedeemerView era]
+  , twvRedeemers :: [TxRedeemerView era]
   -- ^ Redeemers, sorted by purpose, then by index.
   }
 
 -- | A redeemer, with the types a Plutus script witness uses for it when
 -- building.
-data RedeemerView era = RedeemerView
-  { rvPurpose :: PlutusScriptPurpose
+data TxRedeemerView era = TxRedeemerView
+  { trvPurpose :: PlutusScriptPurpose
   -- ^ What the redeemer is for: the kind of body item its pointer points at
   -- (an input, a minting policy, a certificate, and so on).
-  , rvIndex :: Word32
+  , trvIndex :: Word32
   -- ^ Which item of that kind: its position in the ledger's order, counting
   -- from 0.
-  , rvItem :: Maybe (AnyWitnessable era)
+  , trvItem :: Maybe (AnyWitnessable era)
   -- ^ The body item at that index, found with 'L.redeemerPointerInverse' on
   -- the body of the transaction that holds the redeemer. 'Nothing' if the
   -- body has no item at that index. The ledger would reject such a
   -- transaction, but the redeemer is still shown.
-  , rvData :: HashableScriptData
+  , trvData :: HashableScriptData
   -- ^ The data the redeemer passes to the script.
-  , rvExUnits :: ExecutionUnits
+  , trvExUnits :: ExecutionUnits
   -- ^ The script's budget: memory and CPU steps.
   }
 
@@ -290,9 +290,9 @@ viewLedgerTx :: Era era -> L.Tx L.TopTx (LedgerEra era) -> TxView L.TopTx (Ledge
 viewLedgerTx era tx =
   obtainCommonConstraints era $
     TxView
-      { txViewId = fromShelleyTxId (L.txIdTx tx)
-      , txViewBody = viewBody era tx (viewTopTxOnly era tx)
-      , txViewWitnesses = viewWitnesses era tx
+      { tvId = fromShelleyTxId (L.txIdTx tx)
+      , tvBody = viewBody era tx (viewTopTxOnlyFields era tx)
+      , tvWitnesses = viewWitnesses era tx
       }
 
 -- | View a signed sub-transaction.
@@ -307,27 +307,28 @@ viewUnsignedSubTx (UnsignedSubTx tx) = viewLedgerSubTx tx
 viewLedgerSubTx :: L.Tx L.SubTx (LedgerEra DijkstraEra) -> TxView L.SubTx (LedgerEra DijkstraEra)
 viewLedgerSubTx tx =
   TxView
-    { txViewId = fromShelleyTxId (L.txIdTx tx)
-    , txViewBody = viewBody DijkstraEra tx NoTopTxFields
-    , txViewWitnesses = viewWitnesses DijkstraEra tx
+    { tvId = fromShelleyTxId (L.txIdTx tx)
+    , tvBody = viewBody DijkstraEra tx NoTopTxFields
+    , tvWitnesses = viewWitnesses DijkstraEra tx
     }
 
 -- | The fields only a top-level body has. The lenses used here are typed
 -- @'L.TxBody' 'L.TopTx'@ in the ledger.
-viewTopTxOnly :: Era era -> L.Tx L.TopTx (LedgerEra era) -> TopTxOnlyView L.TopTx (LedgerEra era)
-viewTopTxOnly era tx =
+viewTopTxOnlyFields
+  :: Era era -> L.Tx L.TopTx (LedgerEra era) -> TopTxOnlyFieldsView L.TopTx (LedgerEra era)
+viewTopTxOnlyFields era tx =
   obtainCommonConstraints era $
     let body = tx ^. L.bodyTxL
      in TopTxView
-          { tvInsCollateral = map fromShelleyTxIn (toList (body ^. L.collateralInputsTxBodyL))
-          , tvTotalCollateral = L.strictMaybeToMaybe (body ^. L.totalCollateralTxBodyL)
-          , tvReturnCollateral = TxOut <$> L.strictMaybeToMaybe (body ^. L.collateralReturnTxBodyL)
-          , tvFee = body ^. L.feeTxBodyL
-          , tvScriptValidity = isValidToScriptValidity (tx ^. L.isPhase2ValidTxL)
-          , tvSubTransactions = case era of
+          { ttvInsCollateral = map fromShelleyTxIn (toList (body ^. L.collateralInputsTxBodyL))
+          , ttvTotalCollateral = L.strictMaybeToMaybe (body ^. L.totalCollateralTxBodyL)
+          , ttvReturnCollateral = TxOut <$> L.strictMaybeToMaybe (body ^. L.collateralReturnTxBodyL)
+          , ttvFee = body ^. L.feeTxBodyL
+          , ttvScriptValidity = isValidToScriptValidity (tx ^. L.isPhase2ValidTxL)
+          , ttvSubTransactions = case era of
               ConwayEra -> []
               DijkstraEra -> map viewLedgerSubTx (toList (body ^. L.subTransactionsTxBodyL))
-          , tvStartingAccountBalanceIntervals = case era of
+          , ttvStartingAccountBalanceIntervals = case era of
               ConwayEra -> L.AccountBalanceIntervals mempty
               DijkstraEra -> body ^. L.startingAccountBalanceIntervalsTxBodyL
           }
@@ -338,7 +339,7 @@ viewTopTxOnly era tx =
 viewBody
   :: Era era
   -> L.Tx l (LedgerEra era)
-  -> TopTxOnlyView l (LedgerEra era)
+  -> TopTxOnlyFieldsView l (LedgerEra era)
   -> BodyView l (LedgerEra era)
 viewBody era tx topTxOnly =
   obtainCommonConstraints era $
@@ -383,31 +384,31 @@ viewBody era tx topTxOnly =
           , bvAccountBalanceIntervals = case era of
               ConwayEra -> L.AccountBalanceIntervals mempty
               DijkstraEra -> body ^. L.accountBalanceIntervalsTxBodyL
-          , bvTopTxOnly = topTxOnly
+          , bvTopTxOnlyFields = topTxOnly
           }
 
 -- | The witness set, with each redeemer pointer resolved against the body
 -- of the same transaction.
-viewWitnesses :: Era era -> L.Tx l (LedgerEra era) -> WitnessesView (LedgerEra era)
+viewWitnesses :: Era era -> L.Tx l (LedgerEra era) -> TxWitnessesView (LedgerEra era)
 viewWitnesses era tx =
   obtainCommonConstraints era $
     let wits = tx ^. L.witsTxL
         body = tx ^. L.bodyTxL
         L.TxDats datums = wits ^. L.datsTxWitsL
-     in WitnessesView
-          { wvKeyWitnesses = toList (wits ^. L.addrTxWitsL)
-          , wvBootstrapWitnesses = toList (wits ^. L.bootAddrTxWitsL)
-          , wvScripts = Map.map (viewScript era) (wits ^. L.scriptTxWitsL)
-          , wvDatums = datums
-          , wvRedeemers =
-              [ RedeemerView
-                  { rvPurpose = purpose
-                  , rvIndex = index
-                  , rvItem = case L.redeemerPointerInverse body pointer of
+     in TxWitnessesView
+          { twvKeyWitnesses = toList (wits ^. L.addrTxWitsL)
+          , twvBootstrapWitnesses = toList (wits ^. L.bootAddrTxWitsL)
+          , twvScripts = Map.map (viewScript era) (wits ^. L.scriptTxWitsL)
+          , twvDatums = datums
+          , twvRedeemers =
+              [ TxRedeemerView
+                  { trvPurpose = purpose
+                  , trvIndex = index
+                  , trvItem = case L.redeemerPointerInverse body pointer of
                       L.SJust item -> Just (viewRedeemerItem era body item)
                       L.SNothing -> Nothing
-                  , rvData = fromAlonzoData redeemerData
-                  , rvExUnits = fromAlonzoExUnits exUnits
+                  , trvData = fromAlonzoData redeemerData
+                  , trvExUnits = fromAlonzoExUnits exUnits
                   }
               | (pointer, (redeemerData, exUnits)) <- Map.toList (L.unRedeemers (wits ^. L.rdmrsTxWitsL))
               , let (purpose, index) = viewRedeemerPointer era pointer
@@ -504,17 +505,17 @@ instance Eq UndecodedPlutusScript where
   UndecodedPlutusScript v1 (PlutusScriptSerialised bytes1) == UndecodedPlutusScript v2 (PlutusScriptSerialised bytes2) =
     AnyPlutusScriptVersion v1 == AnyPlutusScriptVersion v2 && bytes1 == bytes2
 
-deriving instance Eq (RedeemerView era)
+deriving instance Eq (TxRedeemerView era)
 
-deriving instance Show (RedeemerView era)
+deriving instance Show (TxRedeemerView era)
 
-deriving instance L.AlonzoEraTx era => Eq (WitnessesView era)
+deriving instance L.AlonzoEraTx era => Eq (TxWitnessesView era)
 
-deriving instance L.AlonzoEraTx era => Show (WitnessesView era)
+deriving instance L.AlonzoEraTx era => Show (TxWitnessesView era)
 
-deriving instance (L.AlonzoEraTx era, L.ConwayEraTxBody era) => Eq (TopTxOnlyView l era)
+deriving instance (L.AlonzoEraTx era, L.ConwayEraTxBody era) => Eq (TopTxOnlyFieldsView l era)
 
-deriving instance (L.AlonzoEraTx era, L.ConwayEraTxBody era) => Show (TopTxOnlyView l era)
+deriving instance (L.AlonzoEraTx era, L.ConwayEraTxBody era) => Show (TopTxOnlyFieldsView l era)
 
 deriving instance (L.AlonzoEraTx era, L.ConwayEraTxBody era) => Eq (BodyView l era)
 

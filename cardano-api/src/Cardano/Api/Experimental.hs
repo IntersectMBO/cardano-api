@@ -50,9 +50,9 @@ module Cardano.Api.Experimental
     -- ** Viewing a decoded transaction
   , TxView (..)
   , BodyView (..)
-  , TopTxOnlyView (..)
-  , WitnessesView (..)
-  , RedeemerView (..)
+  , TopTxOnlyFieldsView (..)
+  , TxWitnessesView (..)
+  , TxRedeemerView (..)
   , UndecodedPlutusScript (..)
   , viewSignedTx
   , viewUnsignedTx
