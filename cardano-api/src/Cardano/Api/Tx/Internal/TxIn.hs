@@ -37,6 +37,7 @@ module Cardano.Api.Tx.Internal.TxIn
 where
 
 import Cardano.Api.HasTypeProxy
+import Cardano.Api.Internal.Orphans.Misc ()
 import Cardano.Api.Parser.Text qualified as P
 import Cardano.Api.Pretty
 import Cardano.Api.Serialise.Json
@@ -46,7 +47,7 @@ import Cardano.Api.Serialise.SerialiseUsing
 import Cardano.Chain.UTxO qualified as Byron
 import Cardano.Crypto.Hash.Class qualified as Crypto
 import Cardano.Crypto.Hashing qualified as Byron
-import Cardano.Ledger.BaseTypes qualified as Ledger
+import Cardano.Ledger.BaseTypes (TxIx (..))
 import Cardano.Ledger.Hashes qualified as Hashes
 import Cardano.Ledger.Shelley.TxBody qualified as Shelley
 import Cardano.Ledger.TxIn qualified as Ledger
@@ -119,14 +120,6 @@ parseTxIn = TxIn <$> parseTxId <*> (P.char '#' *> parseTxIx)
 renderTxIn :: TxIn -> Text
 renderTxIn = docToText . pretty
 
-newtype TxIx = TxIx Word
-  deriving stock (Eq, Ord, Show)
-  deriving newtype Enum
-  deriving newtype (ToJSON, FromJSON)
-
-instance Pretty TxIx where
-  pretty (TxIx ix') = pretty ix'
-
 parseTxIx :: P.Parser TxIx
 parseTxIx = TxIx . fromIntegral <$> P.parseDecimal
 
@@ -135,19 +128,17 @@ fromByronTxIn (Byron.TxInUtxo txId index) =
   let shortBs = Byron.abstractHashToShort txId
       mApiHash = Crypto.hashFromBytesShort shortBs
    in case mApiHash of
-        Just apiHash -> TxIn (TxId apiHash) (TxIx . fromIntegral $ toInteger index)
+        Just apiHash -> TxIn (TxId apiHash) (TxIx index)
         Nothing -> error $ "Error converting Byron era TxId: " <> show txId
 
 toByronTxIn :: TxIn -> Byron.TxIn
 toByronTxIn (TxIn txid (TxIx txix)) =
-  Byron.TxInUtxo (toByronTxId txid) (fromIntegral txix)
+  Byron.TxInUtxo (toByronTxId txid) txix
 
--- | This function may overflow on the transaction index. Call sites must ensure
--- that all uses of this function are appropriately guarded.
 toShelleyTxIn :: TxIn -> Ledger.TxIn
-toShelleyTxIn (TxIn txid (TxIx txix)) =
-  Ledger.TxIn (toShelleyTxId txid) (Ledger.TxIx $ fromIntegral txix)
+toShelleyTxIn (TxIn txid txix) =
+  Ledger.TxIn (toShelleyTxId txid) txix
 
 fromShelleyTxIn :: Ledger.TxIn -> TxIn
-fromShelleyTxIn (Ledger.TxIn txid (Ledger.TxIx txix)) =
-  TxIn (fromShelleyTxId txid) (TxIx (fromIntegral txix))
+fromShelleyTxIn (Ledger.TxIn txid txix) =
+  TxIn (fromShelleyTxId txid) txix

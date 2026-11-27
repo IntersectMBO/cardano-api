@@ -1399,8 +1399,10 @@ prop_estimateTransactionKeyWitnessCount_counts_pool_owners = H.property $ do
 -- index.
 prop_createCompatibleTx_redeemer_indices_follow_sorted_inputs :: Property
 prop_createCompatibleTx_redeemer_indices_follow_sorted_inputs = H.property $ do
-  txIn1@(Api.TxIn txId (Api.TxIx txIx)) <- H.forAll genTxIn
-  let txIn2 = Api.TxIn txId (Api.TxIx (txIx + 1))
+  txId <- H.forAll genTxId
+  txIx <- H.forAll . Gen.word16 $ Range.constant 0 (maxBound - 1)
+  let txIn1 = Api.TxIn txId (Api.TxIx txIx)
+      txIn2 = Api.TxIn txId (Api.TxIx (txIx + 1))
 
       sbe = convert Exp.ConwayEra
 
@@ -1903,8 +1905,9 @@ prop_guard_native_key_estimate = H.property $ do
 -- a fee that covers the final transaction's ledger minimum.
 prop_guard_auto_balance :: Bool -> Property
 prop_guard_auto_balance useReference = H.withTests 10 $ H.property $ do
-  input <- H.forAll genTxIn
-  let Api.TxIn inputId (Api.TxIx inputIx) = input
+  inputId <- H.forAll genTxId
+  inputIx <- H.forAll . Gen.word16 $ Range.constant 0 (maxBound - 2)
+  let input = Api.TxIn inputId (Api.TxIx inputIx)
       collateral = Api.TxIn inputId (Api.TxIx (inputIx + 1))
       reference = Api.TxIn inputId (Api.TxIx (inputIx + 2))
   address <- H.forAll $ genAddressInEra Api.ShelleyBasedEraDijkstra

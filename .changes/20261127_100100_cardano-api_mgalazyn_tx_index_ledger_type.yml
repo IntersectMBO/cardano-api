@@ -1,0 +1,6 @@
+project: cardano-api
+pr: 1429
+kind:
+- breaking
+description: |
+  `TxIx` is now the ledger's `TxIx`, a newtype over `Word16`, re-exported from `Cardano.Api` in place of the old newtype over `Word`. Code that built a `TxIx` from a `Word` or other wider integer must now supply a `Word16`, converting with a bounds check, and `unTxIx` now reads the index back as a `Word16`. `FromJSON TxIx` now rejects values above 65535. `Show TxIn` now prints the index as `TxIx {unTxIx = n}`. `genTxIndex` in the public `cardano-api:gen` sublibrary now produces the ledger `TxIx`. `guardShelleyTxInsOverflow` and the `TxBodyInIxOverflow` error are removed, because a transaction input index can no longer exceed the ledger's limit of 65535, while `validateTxIns` still checks that the transaction has inputs (both removed names were public through `Cardano.Api`).

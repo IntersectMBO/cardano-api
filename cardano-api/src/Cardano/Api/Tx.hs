@@ -375,7 +375,6 @@ module Cardano.Api.Tx
   , getTxBodyContent
   -- Temp
   , validateTxIns
-  , guardShelleyTxInsOverflow
   , validateTxOuts
   , validateMetadata
   , validateTxInsCollateral
