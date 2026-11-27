@@ -6,6 +6,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Cardano.Api.Experimental.Plutus.Internal.IndexedPlutusScriptWitness
   ( -- * Constuct an indexed plutus script witness.
@@ -47,6 +48,8 @@ import Cardano.Ledger.Dijkstra.Scripts qualified as L
 
 import Data.Function
 import Data.List qualified as List
+import Data.Type.Equality ((:~:) (Refl))
+import Data.Typeable (Typeable, eqT)
 import Data.Word
 import GHC.Exts
 
@@ -112,35 +115,17 @@ deriving instance Eq (Witnessable thing era)
 -- | A 'Witnessable' of any item kind, for lists that mix kinds, such as the
 -- redeemers of a decoded transaction.
 data AnyWitnessable era where
-  AnyWitnessable :: Witnessable thing era -> AnyWitnessable era
+  AnyWitnessable :: Typeable thing => Witnessable thing era -> AnyWitnessable era
 
 deriving instance Show (AnyWitnessable era)
 
 -- | Equal when both hold the same kind of item and the items are equal.
 instance Eq (AnyWitnessable era) where
-  AnyWitnessable a == AnyWitnessable b =
-    case a of
-      WitTxIn{} -> case b of
-        WitTxIn{} -> a == b
-        _ -> False
-      WitTxCert{} -> case b of
-        WitTxCert{} -> a == b
-        _ -> False
-      WitMint{} -> case b of
-        WitMint{} -> a == b
-        _ -> False
-      WitWithdrawal{} -> case b of
-        WitWithdrawal{} -> a == b
-        _ -> False
-      WitVote{} -> case b of
-        WitVote{} -> a == b
-        _ -> False
-      WitProposal{} -> case b of
-        WitProposal{} -> a == b
-        _ -> False
-      WitGuard{} -> case b of
-        WitGuard{} -> a == b
-        _ -> False
+  AnyWitnessable a == AnyWitnessable b = maybe False (\Refl -> a == b) $ sameThing a b
+   where
+    sameThing
+      :: (Typeable t1, Typeable t2) => Witnessable t1 e -> Witnessable t2 e -> Maybe (t1 :~: t2)
+    sameThing _ _ = eqT
 
 -- | We have to enforce the same ordering of witnessable things that exists in the ledger.
 -- If we don't our redeemer pointer map will be incorrect and the transaction will be invalid.

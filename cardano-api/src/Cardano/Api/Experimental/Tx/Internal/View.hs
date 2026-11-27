@@ -5,7 +5,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE UndecidableInstances #-}
 
 -- | A read-only view of a decoded transaction.
 --
@@ -42,7 +41,6 @@ module Cardano.Api.Experimental.Tx.Internal.View
 where
 
 import Cardano.Api.Address (StakeAddress, fromShelleyStakeAddr)
-import Cardano.Api.Era.Internal.Eon.ShelleyBasedEra (ShelleyBasedEra (..))
 import Cardano.Api.Experimental.AnyScript (AnyScript (..))
 import Cardano.Api.Experimental.Certificate qualified as Exp
 import Cardano.Api.Experimental.Era
@@ -412,15 +410,15 @@ viewWitnesses era tx =
      in TxWitnessesView
           { twvKeyWitnesses = toList (wits ^. L.addrTxWitsL)
           , twvBootstrapWitnesses = toList (wits ^. L.bootAddrTxWitsL)
-          , twvScripts = Map.map (viewScript era) (wits ^. L.scriptTxWitsL)
+          , twvScripts = viewScript era <$> wits ^. L.scriptTxWitsL
           , twvDatums = datums
           , twvRedeemers =
               [ TxRedeemerView
                   { trvPurpose = purpose
                   , trvIndex = index
-                  , trvItem = case L.redeemerPointerInverse body pointer of
-                      L.SJust item -> Just (viewRedeemerItem era body item)
-                      L.SNothing -> Nothing
+                  , trvItem =
+                      viewRedeemerItem era body
+                        <$> L.strictMaybeToMaybe (L.redeemerPointerInverse body pointer)
                   , trvData = fromAlonzoData redeemerData
                   , trvExUnits = fromAlonzoExUnits exUnits
                   }
@@ -510,9 +508,8 @@ viewRedeemerItem era body purpose = case era of
 -- | The purpose and index of a redeemer pointer.
 viewRedeemerPointer
   :: Era era -> L.PlutusPurpose L.AsIx (LedgerEra era) -> (PlutusScriptPurpose, Word32)
-viewRedeemerPointer era = case era of
-  ConwayEra -> toPlutusScriptPurposeIndex ShelleyBasedEraConway
-  DijkstraEra -> toPlutusScriptPurposeIndex ShelleyBasedEraDijkstra
+viewRedeemerPointer era =
+  obtainCommonConstraints era $ toPlutusScriptPurposeIndex (convert era)
 
 deriving instance Eq (TxScriptView era)
 
